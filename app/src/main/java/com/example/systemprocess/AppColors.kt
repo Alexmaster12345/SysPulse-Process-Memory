@@ -79,44 +79,14 @@ import com.example.systemprocess.telemetry.ThermalCore
 import com.example.systemprocess.ui.theme.SystemProcessTheme
 import kotlin.math.min
 
-internal object AppSettings {
-    var textScale by mutableStateOf(1.0f)
-}
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            SystemProcessTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = AppColors.Background
-                ) {
-                    val baseDensity = LocalDensity.current
-                    CompositionLocalProvider(
-                        LocalDensity provides Density(
-                            density = baseDensity.density,
-                            fontScale = baseDensity.fontScale * AppSettings.textScale
-                        )
-                    ) {
-                        var showSplash by rememberSaveable { mutableStateOf(true) }
-                        if (showSplash) {
-                            SplashScreen(onFinished = { showSplash = false })
-                        } else {
-                            AppRoot()
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF0B0C0F, showSystemUi = true)
-@Composable
-internal fun AppPreview() {
-    SystemProcessTheme {
-        AppRoot()
-    }
+internal object AppColors {
+    val Background = Color(0xFF0B0C0F)
+    val Card = Color(0xFF16181E)
+    val CardBorder = Color(0xFF2A2D36)
+    val SubtleText = Color(0xFF8B91A3)
+    val AccentCyan = Color(0xFF12CFFB)
+    val AccentBlue = Color(0xFF2F6BFF)
+    val AccentGreen = Color(0xFF87E10D)
+    val AccentOrange = Color(0xFFFFAA17)
+    val AccentRed = Color(0xFFFF4778)
 }

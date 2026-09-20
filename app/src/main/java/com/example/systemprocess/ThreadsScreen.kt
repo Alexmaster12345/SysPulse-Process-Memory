@@ -79,44 +79,64 @@ import com.example.systemprocess.telemetry.ThermalCore
 import com.example.systemprocess.ui.theme.SystemProcessTheme
 import kotlin.math.min
 
-internal object AppSettings {
-    var textScale by mutableStateOf(1.0f)
-}
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            SystemProcessTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = AppColors.Background
-                ) {
-                    val baseDensity = LocalDensity.current
-                    CompositionLocalProvider(
-                        LocalDensity provides Density(
-                            density = baseDensity.density,
-                            fontScale = baseDensity.fontScale * AppSettings.textScale
-                        )
-                    ) {
-                        var showSplash by rememberSaveable { mutableStateOf(true) }
-                        if (showSplash) {
-                            SplashScreen(onFinished = { showSplash = false })
-                        } else {
-                            AppRoot()
-                        }
-                    }
-                }
-            }
-        }
+@Composable
+internal fun ThreadsScreen(state: TelemetryUiState, onBack: () -> Unit) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item { Spacer(Modifier.height(8.dp)) }
+        item { ScreenTopBar(title = "Processes", subtitle = "${state.processes.size} Total Threads", onBack = onBack) }
+        item { ProcessListCard(state) }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0B0C0F, showSystemUi = true)
 @Composable
-internal fun AppPreview() {
-    SystemProcessTheme {
-        AppRoot()
+internal fun ProcessListCard(state: TelemetryUiState) {
+    CardShell("Processes", right = "${state.processes.size} visible") {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            listOf("All", "User", "System", "Services").forEachIndexed { i, tab ->
+                val selected = i == 0
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (selected) AppColors.AccentCyan.copy(alpha = 0.2f) else AppColors.Card)
+                        .border(
+                            1.dp,
+                            if (selected) AppColors.AccentCyan else AppColors.CardBorder,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(tab, color = if (selected) AppColors.AccentCyan else AppColors.SubtleText, fontSize = 12.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        if (state.processes.isEmpty()) {
+            Text(
+                "Android 8.0+ restricts unrooted apps from enumerating other apps' processes.",
+                color = AppColors.SubtleText,
+                fontSize = 12.sp
+            )
+        }
+        state.processes.forEach { p ->
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(p.name, color = Color.White)
+                    Text("PID ${p.pid}  ${p.state}", color = AppColors.SubtleText, fontSize = 11.sp)
+                }
+                Text(
+                    "${p.cpuPercent.toInt()} %",
+                    color = processStateColor(p),
+                    modifier = Modifier.width(56.dp),
+                    textAlign = TextAlign.End
+                )
+                Text(p.memText, color = Color.White, modifier = Modifier.width(70.dp), textAlign = TextAlign.End)
+            }
+        }
     }
 }

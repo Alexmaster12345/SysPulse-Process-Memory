@@ -73,50 +73,87 @@ import androidx.compose.ui.unit.sp
 import com.example.systemprocess.telemetry.MemorySegment
 import com.example.systemprocess.telemetry.ProcessEntry
 import com.example.systemprocess.telemetry.TelemetryRepository
+import com.example.systemprocess.telemetry.TelemetryViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.systemprocess.telemetry.SessionExporter
 import com.example.systemprocess.telemetry.TelemetryUiState
 import com.example.systemprocess.telemetry.ThermalCore
 import com.example.systemprocess.ui.theme.SystemProcessTheme
 import kotlin.math.min
 
-internal object AppSettings {
-    var textScale by mutableStateOf(1.0f)
+internal enum class BottomTab(val label: String, val icon: String) {
+    Home("Home", "🏠"),
+    Search("Search", "🔍"),
+    Threads("Threads", "🧩"),
+    Analytics("Analytics", "📈"),
+    Profile("Profile", "👤")
 }
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            SystemProcessTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = AppColors.Background
-                ) {
-                    val baseDensity = LocalDensity.current
-                    CompositionLocalProvider(
-                        LocalDensity provides Density(
-                            density = baseDensity.density,
-                            fontScale = baseDensity.fontScale * AppSettings.textScale
-                        )
-                    ) {
-                        var showSplash by rememberSaveable { mutableStateOf(true) }
-                        if (showSplash) {
-                            SplashScreen(onFinished = { showSplash = false })
-                        } else {
-                            AppRoot()
-                        }
-                    }
-                }
+@Composable
+internal fun AppRoot() {
+    val viewModel: TelemetryViewModel = viewModel()
+    val state by viewModel.state.collectAsState()
+    var selectedTab by rememberSaveable { mutableStateOf(BottomTab.Home) }
+
+    Scaffold(
+        containerColor = AppColors.Background,
+        bottomBar = {
+            BottomNavBar(selectedTab = selectedTab, onSelect = { selectedTab = it })
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            when (selectedTab) {
+                BottomTab.Home -> HomeScreen(
+                    state = state,
+                    onOpenThreads = { selectedTab = BottomTab.Threads },
+                    onOpenAnalytics = { selectedTab = BottomTab.Analytics }
+                )
+                BottomTab.Threads -> ThreadsScreen(state = state, onBack = { selectedTab = BottomTab.Home })
+                BottomTab.Analytics -> AnalyticsScreen(
+                    state = state,
+                    onViewAllProcesses = { selectedTab = BottomTab.Threads },
+                    onBack = { selectedTab = BottomTab.Home }
+                )
+                BottomTab.Search -> SearchScreen(state = state)
+                BottomTab.Profile -> ProfileScreen()
             }
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0B0C0F, showSystemUi = true)
 @Composable
-internal fun AppPreview() {
-    SystemProcessTheme {
-        AppRoot()
+internal fun BottomNavBar(selectedTab: BottomTab, onSelect: (BottomTab) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppColors.Card)
+            .border(width = 1.dp, color = AppColors.CardBorder)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        BottomTab.entries.forEach { tab ->
+            val selected = tab == selectedTab
+            val tint = if (selected) AppColors.AccentBlue else AppColors.SubtleText
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onSelect(tab) }
+            ) {
+                Text(tab.icon, color = tint, fontSize = 18.sp)
+                Text(tab.label, color = tint, fontSize = 11.sp)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PlaceholderScreen(title: String, message: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(message, color = AppColors.SubtleText, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
