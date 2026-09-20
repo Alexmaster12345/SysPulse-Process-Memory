@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import com.example.systemprocess.telemetry.MemorySegment
 import com.example.systemprocess.telemetry.ProcessEntry
 import com.example.systemprocess.telemetry.TelemetryRepository
+import com.example.systemprocess.telemetry.SessionExporter
 import com.example.systemprocess.telemetry.TelemetryUiState
 import com.example.systemprocess.telemetry.ThermalCore
 import com.example.systemprocess.ui.theme.SystemProcessTheme
@@ -1223,7 +1224,73 @@ private fun AnalyticsScreen(state: TelemetryUiState, onViewAllProcesses: () -> U
         item { MemoryDistributionCard(state) }
         item { AllocationHistoryCard(state) }
         item { TopMemoryConsumersCard(state, onViewAll = onViewAllProcesses) }
+        item { ExportSessionCard(state) }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun ExportSessionCard(state: TelemetryUiState) {
+    val context = LocalContext.current
+    fun runExport(format: SessionExporter.Format) {
+        try {
+            SessionExporter.exportAndShare(context, state, format)
+        } catch (t: Throwable) {
+            android.widget.Toast.makeText(
+                context,
+                "Export failed: ${t.message}",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    CardShell("Export Session", right = "raw metrics") {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Save the current CPU, memory, thermal, battery and process snapshot (with recorded history) for profiling.",
+            color = AppColors.SubtleText,
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            ExportButton(
+                label = "Export CSV",
+                icon = "📄",
+                color = AppColors.AccentGreen,
+                modifier = Modifier.weight(1f),
+                onClick = { runExport(SessionExporter.Format.CSV) }
+            )
+            ExportButton(
+                label = "Export JSON",
+                icon = "{ }",
+                color = AppColors.AccentCyan,
+                modifier = Modifier.weight(1f),
+                onClick = { runExport(SessionExporter.Format.JSON) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExportButton(
+    label: String,
+    icon: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.15f))
+            .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(vertical = 13.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(icon, color = color, fontSize = 13.sp)
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
     }
 }
 
