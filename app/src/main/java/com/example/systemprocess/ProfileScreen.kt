@@ -76,10 +76,11 @@ import com.example.systemprocess.telemetry.TelemetryRepository
 import com.example.systemprocess.telemetry.SessionExporter
 import com.example.systemprocess.telemetry.TelemetryUiState
 import com.example.systemprocess.telemetry.ThermalCore
+import com.example.systemprocess.data.SavedSession
 import com.example.systemprocess.ui.theme.SystemProcessTheme
 import kotlin.math.min
 
-internal enum class ProfileSubScreen { None, Security, CloudSync, Display }
+internal enum class ProfileSubScreen { None, Security, CloudSync, Display, History }
 
 internal data class TextSizeOption(val label: String, val scale: Float)
 
@@ -171,7 +172,11 @@ internal fun DisplayTextScreen(onBack: () -> Unit) {
 }
 
 @Composable
-internal fun ProfileScreen() {
+internal fun ProfileScreen(
+    savedSessions: List<SavedSession> = emptyList(),
+    onDeleteSession: (SavedSession) -> Unit = {},
+    onClearSessions: () -> Unit = {}
+) {
     var subScreen by rememberSaveable { mutableStateOf(ProfileSubScreen.None) }
 
     when (subScreen) {
@@ -185,6 +190,15 @@ internal fun ProfileScreen() {
         }
         ProfileSubScreen.Display -> {
             DisplayTextScreen(onBack = { subScreen = ProfileSubScreen.None })
+            return
+        }
+        ProfileSubScreen.History -> {
+            SessionHistoryScreen(
+                sessions = savedSessions,
+                onDelete = onDeleteSession,
+                onClear = onClearSessions,
+                onBack = { subScreen = ProfileSubScreen.None }
+            )
             return
         }
         ProfileSubScreen.None -> Unit
@@ -265,6 +279,21 @@ internal fun ProfileScreen() {
                     )
                     RowDivider()
                     SystemRow(
+                        icon = "💾",
+                        iconBg = Color(0xFF2A2D36),
+                        label = "Saved Sessions",
+                        onClick = { subScreen = ProfileSubScreen.History },
+                        trailing = {
+                            Text(
+                                "${savedSessions.size}",
+                                color = AppColors.AccentOrange,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    )
+                    RowDivider()
+                    SystemRow(
                         icon = "🔠",
                         iconBg = Color(0xFF2A2D36),
                         label = "Display & Text Size",
@@ -311,6 +340,105 @@ internal fun ProfileScreen() {
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+internal fun SessionHistoryScreen(
+    sessions: List<SavedSession>,
+    onDelete: (SavedSession) -> Unit,
+    onClear: () -> Unit,
+    onBack: () -> Unit
+) {
+    val dateFormat = remember {
+        java.text.SimpleDateFormat("MMM d, HH:mm:ss", java.util.Locale.US)
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item { Spacer(Modifier.height(8.dp)) }
+        item {
+            ScreenTopBar(
+                title = "Saved Sessions",
+                subtitle = "${sessions.size} persisted snapshot(s)",
+                onBack = onBack,
+                trailingIcon = if (sessions.isNotEmpty()) "🗑" else null,
+                onTrailingClick = onClear
+            )
+        }
+        if (sessions.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppColors.Card)
+                        .border(1.dp, AppColors.CardBorder, RoundedCornerShape(16.dp))
+                        .padding(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No saved sessions yet.\nUse \"Save to History\" on the Memory Map screen.",
+                        color = AppColors.SubtleText,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            items(sessions, key = { it.id }) { session ->
+                SavedSessionRow(session, dateFormat.format(java.util.Date(session.savedAt)), onDelete)
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun SavedSessionRow(session: SavedSession, timeLabel: String, onDelete: (SavedSession) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.Card)
+            .border(1.dp, AppColors.CardBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(timeLabel, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "${session.deviceModel} · ${session.durationSeconds}s session",
+                    color = AppColors.SubtleText,
+                    fontSize = 11.sp
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AppColors.AccentRed.copy(alpha = 0.15f))
+                    .clickable { onDelete(session) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text("Delete", color = AppColors.AccentRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            SessionMetric("CPU", "${session.cpuLoadPercent}%", AppColors.AccentCyan)
+            SessionMetric("RAM", String.format("%.1fGB", session.usedMemoryGb), AppColors.AccentGreen)
+            SessionMetric("TEMP", "${session.deviceTempC}°C", AppColors.AccentOrange)
+            SessionMetric("BATT", "${session.batteryLevelPercent}%", Color.White)
+        }
+    }
+}
+
+@Composable
+private fun SessionMetric(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(label, color = AppColors.SubtleText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 

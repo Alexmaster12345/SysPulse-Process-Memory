@@ -93,6 +93,7 @@ internal enum class BottomTab(val label: String, val icon: String) {
 internal fun AppRoot() {
     val viewModel: TelemetryViewModel = viewModel()
     val state by viewModel.state.collectAsState()
+    val savedSessions by viewModel.savedSessions.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(BottomTab.Home) }
 
     Scaffold(
@@ -112,10 +113,15 @@ internal fun AppRoot() {
                 BottomTab.Analytics -> AnalyticsScreen(
                     state = state,
                     onViewAllProcesses = { selectedTab = BottomTab.Threads },
-                    onBack = { selectedTab = BottomTab.Home }
+                    onBack = { selectedTab = BottomTab.Home },
+                    onSaveSession = { viewModel.saveCurrentSession() }
                 )
                 BottomTab.Search -> SearchScreen(state = state)
-                BottomTab.Profile -> ProfileScreen()
+                BottomTab.Profile -> ProfileScreen(
+                    savedSessions = savedSessions,
+                    onDeleteSession = { viewModel.deleteSession(it) },
+                    onClearSessions = { viewModel.clearSessions() }
+                )
             }
         }
     }

@@ -80,7 +80,12 @@ import com.example.systemprocess.ui.theme.SystemProcessTheme
 import kotlin.math.min
 
 @Composable
-internal fun AnalyticsScreen(state: TelemetryUiState, onViewAllProcesses: () -> Unit, onBack: () -> Unit) {
+internal fun AnalyticsScreen(
+    state: TelemetryUiState,
+    onViewAllProcesses: () -> Unit,
+    onBack: () -> Unit,
+    onSaveSession: () -> Unit = {}
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -100,13 +105,13 @@ internal fun AnalyticsScreen(state: TelemetryUiState, onViewAllProcesses: () -> 
         item { MemoryDistributionCard(state) }
         item { AllocationHistoryCard(state) }
         item { TopMemoryConsumersCard(state, onViewAll = onViewAllProcesses) }
-        item { ExportSessionCard(state) }
+        item { ExportSessionCard(state, onSaveSession = onSaveSession) }
         item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
 @Composable
-internal fun ExportSessionCard(state: TelemetryUiState) {
+internal fun ExportSessionCard(state: TelemetryUiState, onSaveSession: () -> Unit = {}) {
     val context = LocalContext.current
     fun runExport(format: SessionExporter.Format) {
         try {
@@ -143,6 +148,21 @@ internal fun ExportSessionCard(state: TelemetryUiState) {
                 onClick = { runExport(SessionExporter.Format.JSON) }
             )
         }
+        Spacer(Modifier.height(12.dp))
+        ExportButton(
+            label = "Save to History",
+            icon = "💾",
+            color = AppColors.AccentOrange,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                onSaveSession()
+                android.widget.Toast.makeText(
+                    context,
+                    "Session saved to history",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        )
     }
 }
 

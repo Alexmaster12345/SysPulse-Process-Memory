@@ -108,7 +108,7 @@ internal fun RowDivider() {
 }
 
 @Composable
-internal fun ScreenTopBar(title: String, subtitle: String, onBack: () -> Unit, trailingIcon: String? = null) {
+internal fun ScreenTopBar(title: String, subtitle: String, onBack: () -> Unit, trailingIcon: String? = null, onTrailingClick: (() -> Unit)? = null) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -130,7 +130,8 @@ internal fun ScreenTopBar(title: String, subtitle: String, onBack: () -> Unit, t
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(AppColors.Card),
+                    .background(AppColors.Card)
+                    .then(if (onTrailingClick != null) Modifier.clickable { onTrailingClick() } else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 Text(trailingIcon, color = Color.White, fontSize = 14.sp)
